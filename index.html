@@ -101,7 +101,6 @@ select{cursor:pointer}
 .day.today{background:linear-gradient(90deg,rgba(95,211,154,.06),transparent 40%);
   margin:0 -17px;padding-left:17px;padding-right:17px}
 .day.weekend .dnum{color:var(--ink-3)}
-.day.past{opacity:.45}
 .dcol{padding-top:1px}
 .dow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 .dnum{font-size:17px;color:var(--ink);letter-spacing:-.01em}
@@ -132,13 +131,52 @@ select{cursor:pointer}
 .mrow .sub{font-size:11.5px;color:var(--ink-3)}
 .term-note{font-size:12px;color:var(--ink-3);text-align:center;margin-top:26px;
   padding-top:14px;border-top:1px solid var(--line-soft)}
+.swipe-hint{display:none;float:right;font-size:11px;color:var(--ink-3);
+  letter-spacing:.04em;text-transform:none;font-weight:400}
+
+/* ── phone: the strip turns sideways and moves above the form ──
+   Same markup, different shape. 21 days of vertical scrolling to reach
+   the entry box is the wrong way round on a small screen. */
+@media(max-width:939px){
+  #stripCol{order:-1}
+  #formCol{order:1}
+  .swipe-hint{display:inline}
+
+  #strip{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    margin:0 -17px;padding:2px 17px 10px;scrollbar-width:thin}
+  #strip::-webkit-scrollbar{height:5px}
+  #strip::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+  .day{display:block;flex:0 0 156px;scroll-snap-align:start;
+    background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--r);padding:10px;min-height:132px}
+  .day.today{margin:0;padding:10px;background:rgba(95,211,154,.07);
+    border-color:rgba(95,211,154,.4)}
+
+  .dcol{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;padding:0 0 7px;
+    border-bottom:1px solid var(--line-soft)}
+  .dow{font-size:11px}
+  .dnum{font-size:14.5px}
+  .dbadge{margin:0}
+  .ecol{margin-top:8px;gap:6px;justify-content:flex-start}
+
+  /* time on its own line, tick and title beneath, delete pinned to the corner */
+  .ev{flex-wrap:wrap;position:relative;padding:7px 22px 7px 8px;background:var(--surface)}
+  .etime{order:-1;flex:1 0 100%;min-width:0}
+  .etime.allday{font-size:11px}
+  .etitle{flex:1 1 0;font-size:12.5px}
+  .erep{display:block;margin:2px 0 0}
+  .btn-x{position:absolute;top:4px;right:2px}
+  .enone{text-align:center;padding:14px 0}
+}
 .term-note b{font-weight:400}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 @media(max-width:560px){
   body{padding:18px 14px 34px}
   input,select{font-size:16px}
-  .day{grid-template-columns:70px minmax(0,1fr);gap:10px}
   .range{font-size:15px}
+  .day{flex-basis:148px}
 }
 </style>
 </head>
@@ -169,7 +207,7 @@ select{cursor:pointer}
   </div>
 
   <div class="cols">
-    <div>
+    <div id="formCol">
       <div class="panel">
         <h3>Add something</h3>
         <form onsubmit="addEvent(event)" autocomplete="off">
@@ -227,9 +265,9 @@ select{cursor:pointer}
       </div>
     </div>
 
-    <div>
+    <div id="stripCol">
       <div class="panel" id="stripPanel">
-        <h3>Coming up</h3>
+        <h3>Coming up <span class="swipe-hint" id="swipeHint">swipe →</span></h3>
         <div id="strip"></div>
       </div>
     </div>
@@ -379,7 +417,9 @@ function render(){
     `${state.weeks*7} days · ${count} item${count===1?'':'s'}`;
 
   /* the strip */
-  document.getElementById('strip').innerHTML=days.map((d,i)=>{
+  const stripEl=document.getElementById('strip');
+  const keepX=stripEl.scrollLeft;
+  stripEl.innerHTML=days.map((d,i)=>{
     const evs=eventsOn(d);
     const wknd=d.getDay()===0||d.getDay()===6;
     const badge=i===0?'<span class="badge b-live">Today</span>'
@@ -406,6 +446,7 @@ function render(){
         }).join(''):'<div class="enone">—</div>'}
       </div></div>`;
   }).join('');
+  stripEl.scrollLeft=keepX;
 
   /* repeating items, managed separately so they aren't buried in the strip */
   const reps=state.events.filter(e=>parseRepeat(e.repeat).kind!=='none');
