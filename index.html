@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ROLL — Rolling Schedule</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b0d10">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ROLL">
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<style>
+:root{
+  --bg:#0b0d10; --surface:#14171c; --surface-2:#1a1e25; --surface-3:#20252e;
+  --line:#272d38; --line-soft:#1e232b;
+  --ink:#dce6ec; --ink-2:#93a1af; --ink-3:#5f6c7a;
+  --phos:#5fd3e0; --gold:#f0c26b; --violet:#b98bff;
+  --good:#5fd39a; --warn:#f0a55f; --bad:#f4707f;
+  --r:6px;
+  --mono:ui-monospace,'SF Mono','JetBrains Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;
+  padding:max(26px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right))
+          max(40px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));
+  background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;
+  line-height:1.55;-webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px)}
+.wrap{max-width:1240px;margin:0 auto;position:relative;z-index:10}
+
+.masthead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
+  padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.mark{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.mark b{color:var(--phos)}
+.mark-sub{color:var(--ink-3);font-size:12.5px;margin-left:10px}
+.mark-meta{color:var(--ink-3);font-size:12px}
+
+.rail{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:18px}
+.rail-l{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.range{font-size:17px;letter-spacing:-.01em}
+.range .arw{color:var(--ink-3);margin:0 6px}
+.range-meta{font-size:12px;color:var(--ink-3);margin-top:1px}
+
+button{font-family:var(--mono);cursor:pointer}
+.btn{background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);
+  border-radius:var(--r);padding:7px 13px;font-size:13px;transition:background .12s,border-color .12s,color .12s}
+.btn:hover{background:var(--surface-3);color:var(--ink);border-color:#333a47}
+.btn-primary{background:var(--phos);border-color:var(--phos);color:#07242a;font-weight:600;width:100%;padding:11px}
+.btn-primary:hover{background:#7ae0eb}
+.btn-ghost{background:transparent;color:var(--ink-2)}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:5px}
+.btn-x{background:transparent;border:1px solid transparent;color:var(--ink-3);
+  padding:2px 7px;border-radius:5px;font-size:13px;line-height:1}
+.btn-x:hover{color:var(--bad);border-color:rgba(244,112,127,.35);background:rgba(244,112,127,.07)}
+:focus-visible{outline:2px solid var(--phos);outline-offset:2px}
+
+.badge{font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;
+  border-radius:4px;border:1px solid;white-space:nowrap;display:inline-block}
+.b-live{color:var(--good);border-color:rgba(95,211,154,.4);background:rgba(95,211,154,.09)}
+.b-next{color:var(--phos);border-color:rgba(95,211,224,.35);background:rgba(95,211,224,.08)}
+.b-ok{color:var(--ink-3);border-color:var(--line)}
+.b-vio{color:var(--violet);border-color:rgba(185,139,255,.4);background:rgba(185,139,255,.08)}
+.b-warn{color:var(--warn);border-color:rgba(240,165,95,.4);background:rgba(240,165,95,.08)}
+.b-good{color:var(--good);border-color:rgba(95,211,154,.4);background:rgba(95,211,154,.09)}
+.b-bad{color:var(--bad);border-color:rgba(244,112,127,.4);background:rgba(244,112,127,.08)}
+
+.cols{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:940px){.cols{grid-template-columns:minmax(0,340px) minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px 17px;margin-bottom:14px}
+.panel > h3{margin:0 0 14px;font-size:12px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-2);padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:5px}
+input,select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+  padding:9px 11px;font-family:var(--mono);font-size:13.5px;border-radius:5px;outline:none;
+  transition:border-color .12s,box-shadow .12s}
+input::placeholder{color:var(--ink-3)}
+input:hover,select:hover{border-color:#333a47}
+input:focus,select:focus{border-color:var(--phos);box-shadow:0 0 0 3px rgba(95,211,224,.12)}
+select{cursor:pointer}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.hint{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.5}
+.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ── the rolling strip ── */
+.day{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;
+  padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.day:last-child{border-bottom:none}
+.day.today{background:linear-gradient(90deg,rgba(95,211,154,.06),transparent 40%);
+  margin:0 -17px;padding-left:17px;padding-right:17px}
+.day.weekend .dnum{color:var(--ink-3)}
+.day.past{opacity:.45}
+.dcol{padding-top:1px}
+.dow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.dnum{font-size:17px;color:var(--ink);letter-spacing:-.01em}
+.day.today .dnum{color:var(--good)}
+.dbadge{margin-top:4px}
+.ecol{min-width:0;display:flex;flex-direction:column;gap:5px;justify-content:center}
+.ev{display:flex;align-items:flex-start;gap:9px;background:var(--surface-2);
+  border:1px solid var(--line);border-left:2px solid var(--phos);border-radius:5px;
+  padding:7px 10px;font-size:13px}
+.ev.rep{border-left-color:var(--violet)}
+.ev.done{opacity:.5;border-left-color:var(--ink-3)}
+.ev.done .etitle{text-decoration:line-through;color:var(--ink-3)}
+.etime{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:66px}
+.etime.allday{color:var(--ink-3);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+.etitle{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.4}
+.erep{color:var(--violet);font-size:11px;margin-left:6px;white-space:nowrap}
+.enone{color:var(--ink-3);font-size:12.5px;font-style:italic;padding:3px 0}
+.tick{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:15px;height:15px;margin-top:2px;
+  border:1px solid var(--line);border-radius:3px;background:var(--bg);cursor:pointer;position:relative}
+.tick:hover{border-color:var(--good)}
+.tick:checked{background:rgba(95,211,154,.16);border-color:var(--good)}
+.tick:checked::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:8px;
+  border:solid var(--good);border-width:0 1.6px 1.6px 0;transform:rotate(43deg)}
+
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.mrow:last-child{border-bottom:none}
+.mrow .sub{font-size:11.5px;color:var(--ink-3)}
+.term-note{font-size:12px;color:var(--ink-3);text-align:center;margin-top:26px;
+  padding-top:14px;border-top:1px solid var(--line-soft)}
+.term-note b{font-weight:400}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:560px){
+  body{padding:18px 14px 34px}
+  input,select{font-size:16px}
+  .day{grid-template-columns:70px minmax(0,1fr);gap:10px}
+  .range{font-size:15px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div><span class="mark"><b>ROLL</b> Rolling Schedule</span>
+      <span class="mark-sub">the next few weeks, nothing else</span></div>
+    <div class="mark-meta" id="mastMeta"></div>
+  </header>
+
+  <div class="rail">
+    <div class="rail-l">
+      <div>
+        <div class="range" id="rangeLbl"></div>
+        <div class="range-meta" id="rangeMeta"></div>
+      </div>
+    </div>
+    <div class="rail-l">
+      <label style="margin:0;color:var(--ink-3)">Show</label>
+      <select id="weeks" onchange="setWeeks(this.value)" style="width:auto;padding:6px 10px">
+        <option value="2">2 weeks</option>
+        <option value="3">3 weeks</option>
+        <option value="4">4 weeks</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h3>Add something</h3>
+        <form onsubmit="addEvent(event)" autocomplete="off">
+          <div class="field">
+            <label for="fTitle">What</label>
+            <input type="text" id="fTitle" placeholder="Physical therapy" required>
+          </div>
+          <div class="two">
+            <div class="field">
+              <label for="fDate">Date</label>
+              <input type="date" id="fDate" required>
+            </div>
+            <div class="field">
+              <label for="fTime">Time</label>
+              <input type="time" id="fTime">
+            </div>
+          </div>
+          <div class="field">
+            <label for="fRepeat">Repeats</label>
+            <select id="fRepeat" onchange="drawRepeatHint()">
+              <option value="none">Just once</option>
+              <option value="week1">Every week</option>
+              <option value="week2">Every 2 weeks</option>
+              <option value="week4">Every 4 weeks</option>
+              <option value="month1">Every month, same date</option>
+            </select>
+            <div class="hint" id="repeatHint">Leave the time blank for an all-day item.</div>
+          </div>
+          <div class="field" id="untilWrap" hidden>
+            <label for="fUntil">Stop repeating after (optional)</label>
+            <input type="date" id="fUntil">
+          </div>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Repeating items</h3>
+        <div id="repeatList"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Sync <span id="syncDot" class="badge b-ok" style="margin-left:6px">local only</span></h3>
+        <div id="syncPane"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Backup</h3>
+        <div class="inline">
+          <button class="btn" onclick="exportData()">Export file</button>
+          <button class="btn" onclick="document.getElementById('fImport').click()">Import file</button>
+          <input type="file" id="fImport" accept=".json" hidden onchange="importData(event)">
+        </div>
+        <div class="hint" id="ioNote">Stored in this browser. Export before clearing site data.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" id="stripPanel">
+        <h3>Coming up</h3>
+        <div id="strip"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="term-note" id="footNote"></p>
+</div>
+
+<script>
+/* ══ state ══════════════════════════════════════════════ */
+const KEY='roll_state_v1';
+let state={weeks:3,events:[],done:{}};
+let lastCfg='';
+
+/* ══ helpers ════════════════════════════════════════════ */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>'e_'+Math.random().toString(36).slice(2,9);
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function parseISO(s){const p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function addDays(d,n){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x;}
+function dayDiff(a,b){return Math.round((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate())
+  -Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/86400000);}
+function today(){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());}
+const fmtS=d=>`${MON[d.getMonth()]} ${d.getDate()}`;
+const fmtL=d=>`${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+function fmtTime(t){
+  if(!t)return '';
+  const [h,m]=t.split(':').map(Number);
+  const ap=h<12?'am':'pm', hh=h%12===0?12:h%12;
+  return `${hh}:${String(m).padStart(2,'0')}${ap}`;
+}
+
+/* ══ recurrence ═════════════════════════════════════════ */
+function parseRepeat(r){
+  if(!r||r==='none')return {kind:'none',every:0};
+  if(r.startsWith('week'))return {kind:'week',every:+r.slice(4)||1};
+  if(r.startsWith('month'))return {kind:'month',every:+r.slice(5)||1};
+  return {kind:'none',every:0};
+}
+function repeatLabel(r){
+  const p=parseRepeat(r);
+  if(p.kind==='none')return '';
+  if(p.kind==='week')return p.every===1?'weekly':`every ${p.every} wks`;
+  return p.every===1?'monthly':`every ${p.every} mo`;
+}
+
+function occursOn(e,day){
+  const start=parseISO(e.date);
+  if(dayDiff(start,day)<0)return false;
+  if(e.until&&dayDiff(parseISO(e.until),day)>0)return false;
+  const p=parseRepeat(e.repeat);
+  if(p.kind==='none')return dayDiff(start,day)===0;
+  if(p.kind==='week')return dayDiff(start,day)%(7*p.every)===0;
+  /* monthly: same date each month, clamped for short months */
+  const dim=new Date(day.getFullYear(),day.getMonth()+1,0).getDate();
+  if(day.getDate()!==Math.min(start.getDate(),dim))return false;
+  const months=(day.getFullYear()-start.getFullYear())*12+(day.getMonth()-start.getMonth());
+  return months>=0&&months%p.every===0;
+}
+
+function windowDays(){
+  const t=today(),n=state.weeks*7,out=[];
+  for(let i=0;i<n;i++)out.push(addDays(t,i));
+  return out;
+}
+function eventsOn(day){
+  return state.events.filter(e=>occursOn(e,day)).sort((a,b)=>{
+    if(!a.time&&!b.time)return a.title.localeCompare(b.title);
+    if(!a.time)return -1;            /* all-day items float to the top of the day */
+    if(!b.time)return 1;
+    return a.time.localeCompare(b.time);
+  });
+}
+const dKey=(id,day)=>`${id}|${iso(day)}`;
+const isDone=(id,day)=>!!state.done[dKey(id,day)];
+
+/* ══ persistence ════════════════════════════════════════ */
+function save(){localStorage.setItem(KEY,JSON.stringify(state));
+  if(typeof scheduleSync==='function')scheduleSync();}
+function norm(e){return {id:e.id||uid(),title:String(e.title||'Untitled').trim(),
+  date:e.date||iso(today()),time:e.time||'',repeat:e.repeat||'none',until:e.until||''};}
+function load(){
+  const raw=localStorage.getItem(KEY);
+  if(raw){try{const s=JSON.parse(raw);Object.assign(state,s);
+    state.events=(state.events||[]).map(norm);state.done=state.done||{};return;}catch(e){}}
+  state.events=[];state.done={};save();
+}
+
+/* ══ actions ════════════════════════════════════════════ */
+function setWeeks(v){state.weeks=parseInt(v)||3;save();render();}
+function drawRepeatHint(){
+  const r=document.getElementById('fRepeat').value;
+  document.getElementById('untilWrap').hidden = r==='none';
+  document.getElementById('repeatHint').textContent = r==='none'
+    ? 'Leave the time blank for an all-day item.'
+    : 'Repeats from the date above. It keeps going unless you set an end.';
+}
+function addEvent(ev){
+  ev.preventDefault();
+  const e=norm({
+    title:document.getElementById('fTitle').value,
+    date:document.getElementById('fDate').value,
+    time:document.getElementById('fTime').value,
+    repeat:document.getElementById('fRepeat').value,
+    until:document.getElementById('fUntil').value
+  });
+  if(!e.title||!e.date)return;
+  state.events.push(e);save();
+  document.getElementById('fTitle').value='';
+  document.getElementById('fTime').value='';
+  render();
+  document.getElementById('fTitle').focus();
+}
+function toggleDone(id,isoDay){
+  const k=`${id}|${isoDay}`;
+  if(state.done[k])delete state.done[k];else state.done[k]=1;
+  save();render();
+}
+function delEvent(id){
+  const e=state.events.find(x=>x.id===id);
+  if(e&&parseRepeat(e.repeat).kind!=='none'
+     &&!confirm(`"${e.title}" repeats. Delete it and all its occurrences?`))return;
+  state.events=state.events.filter(x=>x.id!==id);
+  Object.keys(state.done).forEach(k=>{if(k.startsWith(id+'|'))delete state.done[k];});
+  save();render();
+}
+/* end a repeat from a given day rather than deleting its history */
+function endRepeat(id,isoDay){
+  const e=state.events.find(x=>x.id===id);if(!e)return;
+  e.until=iso(addDays(parseISO(isoDay),-1));
+  save();render();
+}
+
+/* ══ render ═════════════════════════════════════════════ */
+function render(){
+  const t=today(), days=windowDays(), last=days[days.length-1];
+  document.getElementById('weeks').value=state.weeks;
+  document.getElementById('mastMeta').textContent=`${DOW[t.getDay()]} ${fmtL(t)}`;
+  document.getElementById('rangeLbl').innerHTML=`${fmtS(t)}<span class="arw">→</span>${fmtL(last)}`;
+
+  let count=0;
+  days.forEach(d=>count+=eventsOn(d).length);
+  document.getElementById('rangeMeta').textContent=
+    `${state.weeks*7} days · ${count} item${count===1?'':'s'}`;
+
+  /* the strip */
+  document.getElementById('strip').innerHTML=days.map((d,i)=>{
+    const evs=eventsOn(d);
+    const wknd=d.getDay()===0||d.getDay()===6;
+    const badge=i===0?'<span class="badge b-live">Today</span>'
+              :i===1?'<span class="badge b-next">Tomorrow</span>':'';
+    return `<div class="day${i===0?' today':''}${wknd?' weekend':''}">
+      <div class="dcol">
+        <div class="dow">${DOW[d.getDay()]}</div>
+        <div class="dnum">${fmtS(d)}</div>
+        <div class="dbadge">${badge}</div>
+      </div>
+      <div class="ecol">
+        ${evs.length?evs.map(e=>{
+          const done=isDone(e.id,d), rep=parseRepeat(e.repeat).kind!=='none';
+          return `<div class="ev${rep?' rep':''}${done?' done':''}">
+            <input type="checkbox" class="tick" ${done?'checked':''}
+              onchange="toggleDone('${e.id}','${iso(d)}')" title="Mark done">
+            <span class="etime${e.time?'':' allday'}">${e.time?fmtTime(e.time):'all day'}</span>
+            <span class="etitle">${esc(e.title)}${rep?`<span class="erep">${repeatLabel(e.repeat)}</span>`:''}</span>
+            ${rep
+              ? `<button class="btn-x" title="Stop repeating from here"
+                   onclick="endRepeat('${e.id}','${iso(d)}')">⊘</button>`
+              : `<button class="btn-x" title="Delete" onclick="delEvent('${e.id}')">✕</button>`}
+          </div>`;
+        }).join(''):'<div class="enone">—</div>'}
+      </div></div>`;
+  }).join('');
+
+  /* repeating items, managed separately so they aren't buried in the strip */
+  const reps=state.events.filter(e=>parseRepeat(e.repeat).kind!=='none');
+  document.getElementById('repeatList').innerHTML = reps.length
+    ? reps.map(e=>`<div class="mrow">
+        <div><div>${esc(e.title)}</div>
+          <div class="sub">${repeatLabel(e.repeat)} from ${fmtS(parseISO(e.date))}${
+            e.time?' · '+fmtTime(e.time):''}${e.until?' · ends '+fmtS(parseISO(e.until)):''}</div></div>
+        <button class="btn-x" onclick="delEvent('${e.id}')" title="Delete">✕</button></div>`).join('')
+    : '<div class="hint" style="margin:0">Nothing repeating yet.</div>';
+
+  if(typeof drawSync==='function')drawSync();
+}
+
+/* ══ backup ═════════════════════════════════════════════ */
+function exportData(){
+  const blob=new Blob([JSON.stringify({version:1,...state},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`roll_${iso(today())}.json`;a.click();
+  document.getElementById('ioNote').textContent='Exported.';}
+function importData(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=x=>{try{
+    const d=JSON.parse(x.target.result);
+    if(Array.isArray(d.events))state.events=d.events.map(norm);
+    state.done=d.done||{};state.weeks=parseInt(d.weeks)||state.weeks;
+    save();render();
+    document.getElementById('ioNote').textContent=`Loaded ${state.events.length} items.`;
+  }catch(e){document.getElementById('ioNote').textContent='Not a ROLL backup.';}};
+  rd.readAsText(f);ev.target.value='';}
+
+/* ══════════════════════════════════════════════════════════
+   ENCRYPTED SYNC
+   Shares the connection, login and passphrase with FAM, since both
+   apps live on the same origin. Its own table and its own salt.
+   ══════════════════════════════════════════════════════════ */
+const CFG='fam_sync_cfg', SESS='fam_sync_sess', PASS='fam_sync_pass', META='roll_sync_meta';
+const TABLE='roll_vault';
+const PBKDF2_ITER=600000;
+const SUB=globalThis.crypto&&globalThis.crypto.subtle;
+let sync={cfg:null,sess:null,key:null,rev:0,busy:false,note:'',pending:false,timer:null};
+
+const te=new TextEncoder(), td=new TextDecoder();
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+
+async function deriveKey(pass,salt){
+  const base=await SUB.importKey('raw',te.encode(pass),'PBKDF2',false,['deriveKey']);
+  return SUB.deriveKey({name:'PBKDF2',salt,iterations:PBKDF2_ITER,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptState(obj,key){
+  const iv=globalThis.crypto.getRandomValues(new Uint8Array(12));
+  const ct=await SUB.encrypt({name:'AES-GCM',iv},key,te.encode(JSON.stringify(obj)));
+  return {ciphertext:b64(ct),iv:b64(iv)};
+}
+async function decryptState(row,key){
+  const pt=await SUB.decrypt({name:'AES-GCM',iv:unb64(row.iv)},key,unb64(row.ciphertext));
+  return JSON.parse(td.decode(pt));
+}
+async function sbAuth(path,body){
+  const r=await fetch(`${sync.cfg.url}/auth/v1/${path}`,{method:'POST',
+    headers:{'apikey':sync.cfg.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error_description||j.msg||j.message||`auth failed (${r.status})`);
+  return j;
+}
+async function sbRest(path,opts={},retry=true){
+  const r=await fetch(`${sync.cfg.url}/rest/v1/${path}`,{...opts,
+    headers:{'apikey':sync.cfg.key,'Authorization':`Bearer ${sync.sess.access_token}`,
+      'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})}});
+  if(r.status===401&&retry&&sync.sess.refresh_token){await refreshSession();return sbRest(path,opts,false);}
+  if(!r.ok)throw new Error(`${r.status} ${(await r.text()).slice(0,180)}`);
+  return r.status===204?null:r.json();
+}
+async function refreshSession(){
+  saveSession(await sbAuth('token?grant_type=refresh_token',{refresh_token:sync.sess.refresh_token}));}
+function saveSession(j){
+  sync.sess={access_token:j.access_token,refresh_token:j.refresh_token,
+    user_id:(j.user&&j.user.id)||sync.sess?.user_id,email:(j.user&&j.user.email)||sync.sess?.email};
+  localStorage.setItem(SESS,JSON.stringify(sync.sess));}
+
+const syncable=()=>({weeks:state.weeks,events:state.events,done:state.done});
+
+async function pushRemote(force){
+  if(!sync.sess||!sync.key)return;
+  sync.busy=true;drawSync('Saving…');
+  try{
+    const meta=localStorage.getItem(META);
+    if(!meta)throw new Error('no salt on this device');
+    const blob=await encryptState(syncable(),sync.key);
+    const body={user_id:sync.sess.user_id,...blob,salt:JSON.parse(meta).salt,
+      rev:sync.rev+1,updated_at:new Date().toISOString()};
+    let rows;
+    if(sync.rev>0&&!force){
+      rows=await sbRest(`${TABLE}?user_id=eq.${sync.sess.user_id}&rev=eq.${sync.rev}`,
+        {method:'PATCH',body:JSON.stringify(body)});
+      if(!rows||!rows.length){sync.busy=false;sync.pending=true;drawSync('conflict');return;}
+    }else{
+      rows=await sbRest(TABLE,{method:'POST',
+        headers:{'Prefer':'return=representation,resolution=merge-duplicates'},
+        body:JSON.stringify(body)});
+    }
+    sync.rev=(rows&&rows[0]&&rows[0].rev)||sync.rev+1;
+    sync.pending=false;sync.busy=false;drawSync('Saved '+nowTime());
+  }catch(e){sync.busy=false;sync.pending=true;drawSync('offline — will retry');}
+}
+async function pullRemote(){
+  if(!sync.sess)return null;
+  const rows=await sbRest(`${TABLE}?user_id=eq.${sync.sess.user_id}&select=*`);
+  return rows&&rows.length?rows[0]:null;}
+async function applyRemote(row){
+  const d=await decryptState(row,sync.key);
+  Object.assign(state,d);
+  state.events=(state.events||[]).map(norm);state.done=state.done||{};
+  sync.rev=row.rev;localStorage.setItem(KEY,JSON.stringify(state));render();}
+function scheduleSync(){
+  if(!sync.sess||!sync.key)return;
+  clearTimeout(sync.timer);drawSync('unsaved changes');
+  sync.timer=setTimeout(()=>pushRemote(),2500);}
+const nowTime=()=>new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+
+async function connectSupabase(){
+  const url=document.getElementById('sbUrl').value.trim().replace(/\/+$/,'');
+  const key=document.getElementById('sbKey').value.trim();
+  if(!url||!key)return;
+  sync.cfg={url,key};localStorage.setItem(CFG,JSON.stringify(sync.cfg));drawSync('');}
+async function signIn(mode){
+  const email=document.getElementById('sbEmail').value.trim();
+  const pw=document.getElementById('sbPw').value;
+  if(!email||!pw)return;
+  drawSync(mode==='up'?'Creating account…':'Signing in…');
+  try{
+    const j=mode==='up'?await sbAuth('signup',{email,password:pw})
+                       :await sbAuth('token?grant_type=password',{email,password:pw});
+    if(!j.access_token){drawSync('Check your email to confirm, then sign in.');return;}
+    saveSession(j);drawSync('');
+  }catch(e){drawSync(e.message);}}
+function signOut(){localStorage.removeItem(SESS);sync.sess=null;sync.key=null;sync.rev=0;drawSync('');}
+
+async function unlockVault(){
+  const pass=document.getElementById('sbPass').value;
+  if(!pass){drawSync('Enter your passphrase.');return;}
+  drawSync('Unlocking…');
+  try{
+    const remote=await pullRemote();
+    let salt;
+    if(remote){
+      salt=unb64(remote.salt);
+      sync.key=await deriveKey(pass,salt);
+      try{await decryptState(remote,sync.key);}
+      catch{sync.key=null;drawSync('Wrong passphrase for this vault.');return;}
+    }else{
+      salt=globalThis.crypto.getRandomValues(new Uint8Array(16));
+      sync.key=await deriveKey(pass,salt);
+    }
+    localStorage.setItem(META,JSON.stringify({salt:b64(salt)}));
+    localStorage.setItem(PASS,pass);
+    if(remote){
+      const mine=state.events.length, theirs=(await decryptState(remote,sync.key)).events.length;
+      sync.rev=remote.rev;
+      if(mine&&mine!==theirs){
+        if(confirm(`This device has ${mine} items. The synced copy has ${theirs}.\n\nOK = use the synced copy\nCancel = keep this device and push it up`))
+          await applyRemote(remote);
+        else await pushRemote(true);
+      }else await applyRemote(remote);
+      drawSync('Synced '+nowTime());
+    }else{sync.rev=0;await pushRemote(true);}
+  }catch(e){sync.key=null;drawSync('Could not unlock: '+e.message);}}
+
+async function resolveConflict(takeRemote){
+  const row=await pullRemote();
+  if(!row){sync.pending=false;drawSync('');return;}
+  sync.rev=row.rev;
+  if(takeRemote){await applyRemote(row);drawSync('Synced '+nowTime());}
+  else await pushRemote(true);}
+async function syncNow(){
+  if(!sync.key){drawSync('Unlock the vault first.');return;}
+  const row=await pullRemote();
+  if(row&&row.rev!==sync.rev){sync.rev=row.rev;await applyRemote(row);drawSync('Synced '+nowTime());}
+  else await pushRemote();}
+
+function drawSync(note){
+  if(note!==undefined)sync.note=note;
+  const pane=document.getElementById('syncPane'), dot=document.getElementById('syncDot');
+  const foot=document.getElementById('footNote');
+  if(foot)foot.innerHTML = sync.key
+    ? `<b>Encrypted on this device before syncing.</b> Supabase stores a blob it cannot read.`
+    : sync.sess ? `<b>Signed in, schedule locked.</b> Nothing syncs until you unlock it.`
+                : `<b>Local only — nothing leaves this device.</b>`;
+  if(!pane)return;
+  const n=sync.note?`<div class="hint">${esc(sync.note)}</div>`:'';
+
+  if(!SUB||!location.protocol.startsWith('http')){
+    dot.className='badge b-ok';dot.textContent='local only';
+    pane.innerHTML=`<div class="hint">Sync needs the page served over https. Open the hosted copy.</div>`;return;}
+  if(!sync.cfg){
+    dot.className='badge b-ok';dot.textContent='local only';
+    pane.innerHTML=`<div class="field"><label for="sbUrl">Supabase project URL</label>
+        <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co"></div>
+      <div class="field"><label for="sbKey">Anon public key</label>
+        <input type="text" id="sbKey" placeholder="eyJhbGciOi..."></div>
+      <button class="btn btn-primary" onclick="connectSupabase()">Connect</button>
+      <div class="hint">Use the same project as FAM. Sign-in and passphrase are shared between them.</div>${n}`;
+    return;}
+  if(!sync.sess){
+    dot.className='badge b-warn';dot.textContent='signed out';
+    pane.innerHTML=`<div class="field"><label for="sbEmail">Email</label>
+        <input type="email" id="sbEmail" autocomplete="username"></div>
+      <div class="field"><label for="sbPw">Password</label>
+        <input type="password" id="sbPw" autocomplete="current-password"></div>
+      <div class="inline"><button class="btn" onclick="signIn('in')">Sign in</button>
+        <button class="btn btn-ghost" onclick="signIn('up')">Create account</button></div>${n}`;
+    return;}
+  if(!sync.key){
+    dot.className='badge b-warn';dot.textContent='locked';
+    pane.innerHTML=`<div class="hint" style="margin-bottom:10px">Signed in as ${esc(sync.sess.email||'')}</div>
+      <div class="field"><label for="sbPass">Encryption passphrase</label>
+        <input type="password" id="sbPass" autocomplete="off"></div>
+      <button class="btn btn-primary" onclick="unlockVault()">Unlock</button>
+      <div class="hint">The same passphrase you use for FAM. It never leaves this device
+        and cannot be reset by anyone.</div>
+      <div class="inline" style="margin-top:10px"><button class="btn btn-sm btn-ghost" onclick="signOut()">Sign out</button></div>${n}`;
+    return;}
+  if(sync.note==='conflict'){
+    dot.className='badge b-bad';dot.textContent='conflict';
+    pane.innerHTML=`<div class="hint" style="color:var(--bad);margin-bottom:10px">
+        Another device saved after this one loaded. Nothing was overwritten.</div>
+      <div class="inline"><button class="btn" onclick="resolveConflict(true)">Use other device</button>
+        <button class="btn btn-ghost" onclick="resolveConflict(false)">Keep this one</button></div>`;
+    return;}
+  dot.className='badge '+(sync.pending?'b-warn':'b-good');
+  dot.textContent=sync.pending?'pending':'synced';
+  pane.innerHTML=`<div class="hint" style="margin-bottom:10px">${esc(sync.sess.email||'')} · encrypted end to end</div>
+    <div class="inline"><button class="btn" onclick="syncNow()">Sync now</button>
+      <button class="btn btn-ghost" onclick="signOut()">Sign out</button></div>${n}`;}
+
+async function bootSync(){
+  try{sync.cfg=JSON.parse(localStorage.getItem(CFG));}catch(e){}
+  try{sync.sess=JSON.parse(localStorage.getItem(SESS));}catch(e){}
+  drawSync('');
+  const pass=localStorage.getItem(PASS), meta=localStorage.getItem(META);
+  if(sync.cfg&&sync.sess&&pass&&SUB){
+    try{
+      if(meta){
+        sync.key=await deriveKey(pass,unb64(JSON.parse(meta).salt));
+        const row=await pullRemote();
+        if(row){sync.rev=row.rev;await applyRemote(row);drawSync('Synced '+nowTime());}
+        else {sync.rev=0;await pushRemote(true);}
+      }else{
+        /* signed in via FAM but this app has never been unlocked here */
+        const row=await pullRemote();
+        if(row){
+          sync.key=await deriveKey(pass,unb64(row.salt));
+          try{await decryptState(row,sync.key);}catch{sync.key=null;drawSync('');return;}
+          localStorage.setItem(META,JSON.stringify({salt:row.salt}));
+          sync.rev=row.rev;await applyRemote(row);drawSync('Synced '+nowTime());
+        }
+      }
+    }catch(e){sync.key=null;drawSync('Could not reach the vault — working locally.');}
+  }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&sync.key&&!sync.busy)syncNow();});
+
+/* ══ boot ═══════════════════════════════════════════════ */
+load();
+document.getElementById('fDate').value=iso(today());
+drawRepeatHint();
+render();
+drawSync('');
+bootSync();
+</script>
+</body>
+</html>
