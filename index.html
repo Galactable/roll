@@ -26,6 +26,7 @@
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
+html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;
   padding:max(26px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right))
           max(40px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));
@@ -33,7 +34,7 @@ body{margin:0;
   line-height:1.55;-webkit-font-smoothing:antialiased}
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
   background:repeating-linear-gradient(180deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px)}
-.wrap{max-width:1240px;margin:0 auto;position:relative;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;position:relative;z-index:10;min-width:0}
 
 .masthead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
   padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid var(--line)}
@@ -73,7 +74,7 @@ button{font-family:var(--mono);cursor:pointer}
 .b-good{color:var(--good);border-color:rgba(95,211,154,.4);background:rgba(95,211,154,.09)}
 .b-bad{color:var(--bad);border-color:rgba(244,112,127,.4);background:rgba(244,112,127,.08)}
 
-.cols{display:grid;grid-template-columns:1fr;gap:16px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 @media(min-width:940px){.cols{grid-template-columns:minmax(0,340px) minmax(0,1fr)}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:16px 17px;margin-bottom:14px}
@@ -131,44 +132,48 @@ select{cursor:pointer}
 .mrow .sub{font-size:11.5px;color:var(--ink-3)}
 .term-note{font-size:12px;color:var(--ink-3);text-align:center;margin-top:26px;
   padding-top:14px;border-top:1px solid var(--line-soft)}
+.week{display:contents}
+.wlabel{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+  padding:14px 0 5px;border-bottom:1px solid var(--line)}
+.week:first-child .wlabel{padding-top:0}
+.wrange{letter-spacing:0;text-transform:none}
 .swipe-hint{display:none;float:right;font-size:11px;color:var(--ink-3);
   letter-spacing:.04em;text-transform:none;font-weight:400}
 
-/* ── phone: the strip turns sideways and moves above the form ──
-   Same markup, different shape. 21 days of vertical scrolling to reach
-   the entry box is the wrong way round on a small screen. */
+/* ── phone: swipe a week at a time ──
+   The unit of movement is a week, not a day. Each page is the full width of
+   the panel so all seven days are legible at once; the days inside keep the
+   same compact two-column shape they have on desktop. */
 @media(max-width:939px){
-  #stripCol{order:-1}
-  #formCol{order:1}
+  #stripCol{order:-1;min-width:0}
+  #formCol{order:1;min-width:0}
+  #stripPanel{min-width:0}
   .swipe-hint{display:inline}
 
-  #strip{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;
+  #strip{display:flex;align-items:flex-start;gap:0;
+    overflow-x:auto;overscroll-behavior-x:contain;
     scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
-    margin:0 -17px;padding:2px 17px 10px;scrollbar-width:thin}
-  #strip::-webkit-scrollbar{height:5px}
-  #strip::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+    margin:0 -17px;padding-bottom:8px;scrollbar-width:none;max-width:100vw}
+  #strip::-webkit-scrollbar{display:none}
 
-  .day{display:block;flex:0 0 156px;scroll-snap-align:start;
-    background:var(--surface-2);border:1px solid var(--line);
-    border-radius:var(--r);padding:10px;min-height:132px}
-  .day.today{margin:0;padding:10px;background:rgba(95,211,154,.07);
-    border-color:rgba(95,211,154,.4)}
+  .week{display:block;flex:0 0 100%;min-width:0;
+    scroll-snap-align:start;scroll-snap-stop:always;padding:0 17px}
+  .wlabel{padding-top:0;position:sticky;top:0;background:var(--surface);z-index:2}
 
-  .dcol{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;padding:0 0 7px;
-    border-bottom:1px solid var(--line-soft)}
-  .dow{font-size:11px}
-  .dnum{font-size:14.5px}
-  .dbadge{margin:0}
-  .ecol{margin-top:8px;gap:6px;justify-content:flex-start}
+  .day{grid-template-columns:58px minmax(0,1fr);gap:10px;padding:8px 0;align-items:start}
+  .day.today{margin:0 -8px;padding:8px;border-radius:5px}
+  .dow{font-size:10.5px}
+  .dnum{font-size:13.5px}
+  .dbadge{margin-top:2px}
+  .dbadge .badge{font-size:9.5px;padding:1px 5px}
+  .ecol{gap:4px}
 
-  /* time on its own line, tick and title beneath, delete pinned to the corner */
-  .ev{flex-wrap:wrap;position:relative;padding:7px 22px 7px 8px;background:var(--surface)}
-  .etime{order:-1;flex:1 0 100%;min-width:0}
-  .etime.allday{font-size:11px}
-  .etitle{flex:1 1 0;font-size:12.5px}
-  .erep{display:block;margin:2px 0 0}
+  .ev{padding:6px 24px 6px 8px;position:relative;font-size:12.5px}
+  .etime{min-width:58px;font-size:12px}
+  .etime.allday{font-size:10.5px;min-width:58px}
   .btn-x{position:absolute;top:4px;right:2px}
-  .enone{text-align:center;padding:14px 0}
+  .enone{font-size:12px;padding:1px 0}
 }
 .term-note b{font-weight:400}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -267,7 +272,7 @@ select{cursor:pointer}
 
     <div id="stripCol">
       <div class="panel" id="stripPanel">
-        <h3>Coming up <span class="swipe-hint" id="swipeHint">swipe →</span></h3>
+        <h3>Coming up <span class="swipe-hint" id="swipeHint">swipe weeks →</span></h3>
         <div id="strip"></div>
       </div>
     </div>
@@ -416,10 +421,21 @@ function render(){
   document.getElementById('rangeMeta').textContent=
     `${state.weeks*7} days · ${count} item${count===1?'':'s'}`;
 
-  /* the strip */
+  /* the strip: days grouped into 7-day pages.
+     Desktop lets the pages collapse (display:contents) so it reads as one
+     continuous list. Mobile treats each page as a full-width swipe target,
+     so a whole week is on screen at once. */
   const stripEl=document.getElementById('strip');
   const keepX=stripEl.scrollLeft;
-  stripEl.innerHTML=days.map((d,i)=>{
+  const weeks=[];
+  for(let i=0;i<days.length;i+=7)weeks.push(days.slice(i,i+7));
+
+  stripEl.innerHTML=weeks.map((wk,wi)=>`
+    <section class="week">
+      <div class="wlabel"><span>${wi===0?'This week':'Week '+(wi+1)}</span>
+        <span class="wrange">${fmtS(wk[0])} – ${fmtS(wk[wk.length-1])}</span></div>
+      ${wk.map((d,j)=>{
+        const i=wi*7+j;
     const evs=eventsOn(d);
     const wknd=d.getDay()===0||d.getDay()===6;
     const badge=i===0?'<span class="badge b-live">Today</span>'
@@ -445,7 +461,8 @@ function render(){
           </div>`;
         }).join(''):'<div class="enone">—</div>'}
       </div></div>`;
-  }).join('');
+  }).join('')}
+    </section>`).join('');
   stripEl.scrollLeft=keepX;
 
   /* repeating items, managed separately so they aren't buried in the strip */
